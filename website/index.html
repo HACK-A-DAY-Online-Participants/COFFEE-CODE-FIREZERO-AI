@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>FireZero AI Dashboard</title>
+<style>
+body { font-family: Arial; background:#111; color:white; text-align:center; }
+.card { background:#222; margin:20px; padding:20px; border-radius:12px; transition:0.5s; }
+canvas { background:#222; border-radius:12px; margin-top:20px; }
+#alertPopup {
+  display:none; position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  background:red; color:white; padding: 15px 30px;
+  border-radius: 10px; font-size: 20px; font-weight: bold;
+  z-index: 100;
+  animation: flash 1s infinite;
+}
+@keyframes flash { 0%,50%,100% {opacity:1;} 25%,75%{opacity:0;} }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let tempData=[], gasData=[], labels=[];
+
+const tempCtx = document.getElementById('tempChart')?.getContext('2d');
+const gasCtx = document.getElementById('gasChart')?.getContext('2d');
+
+const tempChart = new Chart(tempCtx, {type:'line', data:{labels:labels,datasets:[{label:'Temperature (°C)',data:tempData,borderColor:'red',fill:false,tension:0.3}]}});
+const gasChart = new Chart(gasCtx, {type:'line', data:{labels:labels,datasets:[{label:'Gas Value',data:gasData,borderColor:'yellow',fill:false,tension:0.3}]}});
+
+function showAlert() {
+  const popup = document.getElementById('alertPopup');
+  popup.style.display='block';
+  setTimeout(()=>{popup.style.display='none';},5000);
+}
+
+setInterval(async ()=>{
+  try {
+    
+    const res = await fetch("https://webhook.site/#!/view/f702b84d-e832-40b3-9411-d175ef3f669e/5e769418-4787-47df-8940-265d89e991bd/1"); 
+    const data = await res.json();
+
+  
+    document.getElementById('pir').innerText = data.pir ? "Motion Detected" : "No Motion";
+    document.getElementById('temp').innerText = data.temp + " °C";
+    document.getElementById('gas').innerText = data.gas;
+
+    const riskCard = document.getElementById('risk');
+    riskCard.innerText = data.fireRisk;
+    if(data.fireRisk=="HIGH"){ riskCard.style.background="red"; showAlert(); }
+    else if(data.fireRisk=="MEDIUM") riskCard.style.background="orange";
+    else riskCard.style.background="green";
+
+    
+    const time = new Date().toLocaleTimeString();
+    labels.push(time); tempData.push(data.temp); gasData.push(data.gas);
+    if(labels.length>20){labels.shift(); tempData.shift(); gasData.shift();}
+    tempChart.update(); gasChart.update();
+  } catch(e){
+    console.log("Error fetching data:", e);
+  }
+},2000);
+</script>
+</head>
+<body>
+<div id="alertPopup">🔥 HIGH FIRE RISK!</div>
+<h1>🔥 FireZero AI Dashboard</h1>
+<div class="card">PIR Motion: <span id="pir">Loading...</span></div>
+<div class="card">Temperature: <span id="temp">Loading...</span></div>
+<div class="card">Gas Value: <span id="gas">Loading...</span></div>
+<div class="card">Fire Risk: <span id="risk">Loading...</span></div>
+<canvas id="tempChart" width="400" height="200"></canvas>
+<canvas id="gasChart" width="400" height="200"></canvas>
+</body>
+</html>
